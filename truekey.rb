@@ -93,6 +93,50 @@ def register_new_device device_name, http
     result
 end
 
+# Returns OAuth transaction id that is used in the next step
+def auth_step1 username, device_info, http
+    mock_response = {
+        "oAuthTransId"    => "6cdfcd43-065c-43a1-aa7a-017de98eefd0",
+        "responseResult"  => {
+                   "isSuccess" => true,
+                   "errorCode" => nil,
+            "errorDescription" => nil,
+               "transactionId" => nil
+        },
+        "riskAnalysisInfo" => nil
+    }
+
+    response = http.post_json "https://truekeyapi.intelsecurity.com/session/auth", {
+        data: {
+            contextData: {
+                deviceInfo: {
+                    devicePlatformID: 7, # MacOS (see DevicePlatformType)
+                          deviceType: 5, # Mac (see DeviceType)
+                },
+            },
+            rpData: {
+                clientId: "42a01655e65147c3b03721df36b45195",
+                response_type: "session_id_token",
+                culture: "en-US",
+            },
+            userData: {
+                email: username,
+            },
+            ysvcData: {
+                deviceId: device_info[:id],
+            }
+        }
+    }, {}, mock_response
+
+    parsed = response.parsed_response
+    raise "Request failed" if !parsed["responseResult"]["isSuccess"]
+
+    transaction_id = parsed["oAuthTransId"]
+    raise "Request failed" if transaction_id == nil
+
+    transaction_id
+end
+
 #
 # main
 #
@@ -101,3 +145,4 @@ config = YAML::load_file "config.yaml"
 
 http = Http.new
 device_info = register_new_device "truekey-ruby", http
+transaction_id = auth_step1 config["username"], device_info, http
