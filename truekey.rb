@@ -47,7 +47,6 @@ end
 #
 # `device_name` is the name of the device registered with the True Key service.
 # For example 'Chrome' or 'Nexus 5'.
-
 def register_new_device device_name, http
     mock_response = {
          "responseResult" => {
@@ -117,9 +116,9 @@ def auth_step1 username, device_info, http
                 },
             },
             rpData: {
-                clientId: "42a01655e65147c3b03721df36b45195",
+                     clientId: "42a01655e65147c3b03721df36b45195",
                 response_type: "session_id_token",
-                culture: "en-US",
+                      culture: "en-US",
             },
             userData: {
                 email: username,
