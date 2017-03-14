@@ -86,6 +86,7 @@ def register_new_device device_name, http
 
     result = {
         token: parsed["clientToken"],
+        name: device_name,
         id: parsed["tkDeviceId"]
     }
     raise "Invalid response" if result.values.include? nil
@@ -110,6 +111,7 @@ def auth_step1 username, device_info, http
         data: {
             contextData: {
                 deviceInfo: {
+                          deviceName: device_info[:name],
                     devicePlatformID: 7, # MacOS (see DevicePlatformType)
                           deviceType: 5, # Mac (see DeviceType)
                 },
