@@ -2,21 +2,21 @@ require "json"
 require "yaml"
 require "httparty"
 
-STAY_OFFLINE = true
+FORCE_ONLINE = false
 
 class Http
     include HTTParty
 
-    def get url, headers = {}, mock_response = {}
-        return make_response mock_response if STAY_OFFLINE
+    def get url, headers = {}, mock_response = nil
+        return make_response mock_response if should_return_mock? mock_response
 
         self.class.get url, {
             headers: headers
         }
     end
 
-    def post url, args, headers = {}, mock_response = {}
-        return make_response mock_response if STAY_OFFLINE
+    def post url, args, headers = {}, mock_response = nil
+        return make_response mock_response if should_return_mock? mock_response
 
         self.class.post url, {
             body: args,
@@ -24,11 +24,15 @@ class Http
         }
     end
 
-    def post_json url, args, headers = {}, mock_response = {}
+    def post_json url, args, headers = {}, mock_response = nil
         post url,
              args.to_json,
              headers.merge({"Content-Type" => "application/json"}),
              mock_response
+    end
+
+    def should_return_mock? mock_response
+        mock_response && !FORCE_ONLINE
     end
 
     def make_response mock_response
