@@ -250,6 +250,9 @@ def parse_client_token encoded
     end
 end
 
+# Checks that the OTP info is something we can work with.
+# The Chrome extension also supports only this subset. They don't validate as much, just assume
+# the values are what they expect.
 def validate_otp_info otp
     check = lambda { |name, index, expected|
         actual = otp[:ocra][index]
