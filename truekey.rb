@@ -4,10 +4,16 @@ require "json"
 require "yaml"
 require "httparty"
 
-FORCE_ONLINE = false
-
 class Http
     include HTTParty
+
+    # Network modes:
+    #  - :default: return mock response if one is provided
+    #  - :force_online: always go online
+    #  - :force_offline: never go online and return mock even if it's nil
+    def initialize network_mode = :default
+        @network_mode = network_mode
+    end
 
     def get url, headers = {}, mock_response = nil
         return make_response mock_response if should_return_mock? mock_response
@@ -34,7 +40,16 @@ class Http
     end
 
     def should_return_mock? mock_response
-        mock_response && !FORCE_ONLINE
+        case @network_mode
+        when :default
+            mock_response
+        when :force_online
+            false
+        when :force_offline
+            true
+        else
+            raise "Invalid network_mode '#{@network_mode}'"
+        end
     end
 
     def make_response mock_response
