@@ -4,6 +4,10 @@ require "json"
 require "yaml"
 require "httparty"
 
+#
+# Network
+#
+
 class Http
     include HTTParty
 
@@ -156,6 +160,78 @@ def auth_step1 username, device_info, http
 end
 
 #
+# OCRA/OTP/RFC 6287
+#
+
+# TODO: Make sure these don't leak outside
+class String
+    def d64
+        Base64.decode64 self
+    end
+
+    def e64
+        Base64.strict_encode64 self
+    end
+end
+
+# TODO: Make sure these don't leak outside
+class StringIO
+    def ru size, format
+        read(size).unpack(format)[0]
+    end
+end
+
+# Parses clientToken field returned by the server. It contains encoded
+# OCRA/OPT/RFC 6287 infofmation. This is used later on to sign messages.
+def parse_client_token encoded
+    StringIO.open encoded.d64 do |io|
+        token_type = io.ru 1, "C"
+        token_length = io.ru 2, "n"
+        token = io.read token_length
+        iptmk_tag = io.ru 1, "C"
+        iptmk_length = io.ru 2, "n"
+        iptmk = io.read iptmk_length
+
+        token = StringIO.open token do |io|
+            version = io.ru 1, "C"
+            otp_algo = io.ru 1, "C"
+            otp_length = io.ru 1, "C"
+            hash_algo = io.ru 1, "C"
+            time_step = io.ru 1, "C"
+            start_time = io.ru 4, "N"
+            server_time = io.ru 4, "N"
+            wys_option = io.ru 1, "C"
+            suite_length = io.ru 2, "n"
+            suite = io.read suite_length
+
+            io.pos = 128
+            hmac_seed_length = io.ru 2, "n"
+            hmac_seed = io.read hmac_seed_length
+
+            {
+                version: version,
+                otp_algo: otp_algo,
+                otp_length: otp_length,
+                hash_algo: hash_algo,
+                time_step: time_step,
+                start_time: start_time,
+                server_time: server_time,
+                wys_option: wys_option,
+                suite: suite,
+                hmac_seed: hmac_seed
+            }
+        end
+
+        {
+            token_type: token_type,
+            token: token,
+            iptmk_tag: iptmk_tag,
+            iptmk: iptmk
+        }
+    end
+end
+
+#
 # main
 #
 
@@ -164,3 +240,5 @@ config = YAML::load_file "config.yaml"
 http = Http.new
 device_info = register_new_device "truekey-ruby", http
 transaction_id = auth_step1 config["username"], device_info, http
+
+ap parse_client_token device_info[:token]
