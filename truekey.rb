@@ -3,6 +3,7 @@
 require "json"
 require "yaml"
 require "httparty"
+require "securerandom"
 
 #
 # Network
@@ -192,7 +193,7 @@ def parse_client_token encoded
         iptmk_length = io.ru 2, "n"
         iptmk = io.read iptmk_length
 
-        token = StringIO.open token do |io|
+        ocra = StringIO.open token do |io|
             version = io.ru 1, "C"
             otp_algo = io.ru 1, "C"
             otp_length = io.ru 1, "C"
@@ -223,19 +224,16 @@ def parse_client_token encoded
         end
 
         {
-            token_type: token_type,
-            token: token,
-            iptmk_tag: iptmk_tag,
+            ocra: ocra,
             iptmk: iptmk
         }
     end
 end
 
-def validate_token parsed_token
-    t = parsed_token[:token]
-
-    check = lambda { |name, index, value|
-        raise "Unsupported OTP #{name} (got #{t[index]}, expected #{value})" if t[index] != value
+def validate_otp_info otp
+    check = lambda { |name, index, expected|
+        actual = otp[:ocra][index]
+        raise "Unsupported OTP #{name} (got #{actual}, expected #{expected})" if actual != expected
     }
 
     check.call "version", :version, 3
@@ -243,6 +241,38 @@ def validate_token parsed_token
     check.call "length", :otp_length, 0
     check.call "hash", :hash_algo, 2
     check.call "suite", :suite, "OCRA-1:HOTP-SHA256-0:QA08"
+end
+
+# Generates the OTP signature of type "time". This is deterministic version, both
+# time and random challenge must be provided.
+def generate_otp otp_info, challenge, timestamp_sec
+    raise "challenge must be 128 bytes long (was #{challenge.size})" if challenge.size != 128
+
+    ocra = otp_info[:ocra]
+
+    message = ""
+    message += ocra[:suite]
+    message += "\0"
+    message += challenge
+    message += [0, ((timestamp_sec - ocra[:start_time]) / ocra[:time_step]) & 0xffff_ffff].pack "NN"
+
+    signature = hmac ocra[:hmac_seed], message
+
+    {
+        qn: challenge.e64,
+        otpType: "time",
+        otp: signature.e64
+    }
+end
+
+# Generates the OTP signature of type "time" with a random challnge and current time.
+def generate_random_otp otp_info
+    generate_otp otp_info, SecureRandom.random_bytes(128), Time.now.to_i
+end
+
+# Default HMAC for True Key (HMAC-SHA256).
+def hmac seed, message
+    OpenSSL::HMAC.digest "sha256", seed, message
 end
 
 #
@@ -253,7 +283,8 @@ config = YAML::load_file "config.yaml"
 
 http = Http.new
 device_info = register_new_device "truekey-ruby", http
-device_info[:parsed_token] = parse_client_token device_info[:token]
-validate_token device_info[:parsed_token]
+device_info[:otp_info] = parse_client_token device_info[:token]
+validate_otp_info device_info[:otp_info]
 
 transaction_id = auth_step1 config["username"], device_info, http
+ap generate_random_otp device_info[:otp_info]
