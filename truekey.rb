@@ -231,6 +231,20 @@ def parse_client_token encoded
     end
 end
 
+def validate_token parsed_token
+    t = parsed_token[:token]
+
+    check = lambda { |name, index, value|
+        raise "Unsupported OTP #{name} (got #{t[index]}, expected #{value})" if t[index] != value
+    }
+
+    check.call "version", :version, 3
+    check.call "method", :otp_algo, 1
+    check.call "length", :otp_length, 0
+    check.call "hash", :hash_algo, 2
+    check.call "suite", :suite, "OCRA-1:HOTP-SHA256-0:QA08"
+end
+
 #
 # main
 #
@@ -239,6 +253,7 @@ config = YAML::load_file "config.yaml"
 
 http = Http.new
 device_info = register_new_device "truekey-ruby", http
-transaction_id = auth_step1 config["username"], device_info, http
+device_info[:parsed_token] = parse_client_token device_info[:token]
+validate_token device_info[:parsed_token]
 
-ap parse_client_token device_info[:token]
+transaction_id = auth_step1 config["username"], device_info, http
