@@ -160,6 +160,26 @@ def auth_step1 username, device_info, http
     transaction_id
 end
 
+# Returns instructions on what to do next
+def auth_step2 username, password, device_info, step1_transaction_id, http
+    response = http.post_json "https://truekeyapi.intelsecurity.com/mp/auth", {
+        userData: {
+                   email: username,
+            oAuthTransId: step1_transaction_id,
+                     pwd: hash_password(username, password),
+        },
+        deviceData: {
+                      deviceId: device_info[:id],
+                    deviceType: "mac",
+            devicePlatformType: "macos",
+                       otpData: generate_random_otp(device_info[:otp_info])
+        }
+    }
+
+    # TODO: Parse this!
+    response.parsed_response
+end
+
 #
 # OCRA/OTP/RFC 6287
 #
@@ -293,11 +313,24 @@ end
 
 config = YAML::load_file "config.yaml"
 
-http = Http.new
+http = Http.new :force_online
+
+# Step 1: register a new device and get a token and an id back
 device_info = register_new_device "truekey-ruby", http
+
+# Step 2: parse the token to decode OTP information
 device_info[:otp_info] = parse_client_token device_info[:token]
+
+# Step 3: validate the OTP info to make sure it's got only the things we support at the moment
 validate_otp_info device_info[:otp_info]
 
+# Step 4: auth step 1 gives us a transaction id to pass along to the next step
 transaction_id = auth_step1 config["username"], device_info, http
-ap generate_random_otp device_info[:otp_info]
-ap hash_password config["username"], config["password"]
+
+# Step 5: auth step 2 gives us instructions what to do next. For a new client that would
+#         be some form of second factor auth. For a known client that would be a pair of
+#         OAuth tokens.
+whats_next = auth_step2 config["username"], config["password"], device_info, transaction_id, http
+
+# WIP
+ap whats_next
