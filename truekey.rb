@@ -270,9 +270,21 @@ def generate_random_otp otp_info
     generate_otp otp_info, SecureRandom.random_bytes(128), Time.now.to_i
 end
 
+#
+# Crypto
+#
+
 # Default HMAC for True Key (HMAC-SHA256).
 def hmac seed, message
     OpenSSL::HMAC.digest "sha256", seed, message
+end
+
+# Creates a password hash that is sent to the server during the auth sequence.
+def hash_password username, password
+    salt = Digest::SHA256.digest username
+    bin = OpenSSL::PKCS5.pbkdf2_hmac password, salt, 10000, 32, "sha512"
+    hex = bin.unpack("H*")[0]
+    "tk-v1-" + hex
 end
 
 #
@@ -288,3 +300,4 @@ validate_otp_info device_info[:otp_info]
 
 transaction_id = auth_step1 config["username"], device_info, http
 ap generate_random_otp device_info[:otp_info]
+ap hash_password config["username"], config["password"]
