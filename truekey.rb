@@ -380,6 +380,7 @@ def parse_devices device_info
     device_info.map { |i| {id: i["deviceId"], name: i["deviceName"]} }
 end
 
+# TODO: This is probably better done with some classes rather then a giant switch
 def auth_fsm step, gui
     while !step[:done]
         case step[:state]
