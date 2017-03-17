@@ -608,4 +608,4 @@ config = YAML::load_file "config.yaml"
 http = Http.new :default
 gui = TextGui.new
 
-ap open_vault config["password"], config["username"], http, gui
+ap open_vault config["username"], config["password"], http, gui
