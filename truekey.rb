@@ -119,7 +119,7 @@ def register_new_device device_name, http
     result
 end
 
-def make_common_request client_info, response_type
+def make_common_request client_info, response_type, transaction_id = ""
     {
         data: {
             contextData: {
@@ -136,12 +136,22 @@ def make_common_request client_info, response_type
             },
             userData: {
                 email: client_info[:username],
+                oTransId: transaction_id,
             },
             ysvcData: {
                 deviceId: client_info[:id],
-            }
+            },
         }
     }
+end
+
+def success? response
+    r = response["responseResult"] || response["ResponseResult"] || {}
+    r["isSuccess"] || r["IsSuccess"]
+end
+
+def ensure_success response
+    raise "Request failed" if !success? response
 end
 
 # Returns OAuth transaction id that is used in the next step
@@ -341,16 +351,52 @@ def auth_check
     done "..."
 end
 
-def send_email email, transaction_id
-    puts "Sending email to #{email}"
+def send_email client_info, email, transaction_id, http
+    mock_response = {
+        "ResponseResult" => {
+                   "IsSuccess" => true,
+                   "ErrorCode" => nil,
+            "ErrorDescription" => nil,
+               "TransactionId" => nil
+        }
+    }
 
-    wait_for_email email, transaction_id
+    args = make_common_request client_info, "code", transaction_id
+    args[:notificationData] = {
+        NotificationType: 1,
+        RecipientId: email,
+    }
+
+    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                              args,
+                              {},
+                              mock_response
+
+    ensure_success response.parsed_response
 end
 
-def send_push device, email, transaction_id
-    puts "Sending push message to #{device[:name]}"
+def send_push client_info, device, transaction_id, http
+    mock_response = {
+        "ResponseResult" => {
+                   "IsSuccess" => true,
+                   "ErrorCode" => nil,
+            "ErrorDescription" => nil,
+               "TransactionId" => nil
+        }
+    }
 
-    wait_for_oob device, email, transaction_id
+    args = make_common_request client_info, "code", transaction_id
+    args[:notificationData] = {
+        NotificationType: 2,
+        RecipientId: device[:id],
+    }
+
+    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                              args,
+                              {},
+                              mock_response
+
+    ensure_success response.parsed_response
 end
 
 class Gui
@@ -375,11 +421,11 @@ def parse_auth_step_response response
     when 0, 10
         done response["idToken"]
     when 12
-        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"], response["transactionId"]
+        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"], response["oAuthTransId"]
     when 13
-        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"], response["transactionId"]
+        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"], response["oAuthTransId"]
     when 14
-        wait_for_email ra["verificationEmail"], response["transactionId"]
+        wait_for_email ra["verificationEmail"], response["oAuthTransId"]
     else
         raise "Next two factor step #{next_step} is not supported"
     end
@@ -390,7 +436,7 @@ def parse_devices device_info
 end
 
 # TODO: This is probably better done with some classes rather then a giant switch
-def auth_fsm step, gui
+def auth_fsm client_info, step, gui, http
     while !step[:done]
         case step[:state]
         when :wait_for_email
@@ -399,7 +445,11 @@ def auth_fsm step, gui
             when :check
                 auth_check
             when :resend
-                send_email step[:email], step[:transaction_id]
+                send_email client_info,
+                           step[:email] || client_info[:username],
+                           step[:transaction_id],
+                           http
+                wait_for_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -409,9 +459,14 @@ def auth_fsm step, gui
             when :check
                 auth_check
             when :resend
-                send_push step[:device], step[:email], step[:transaction_id]
+                send_push client_info, step[:device], step[:transaction_id], http
+                wait_for_oob step[:device], step[:email], step[:transaction_id]
             when :email
-                send_email step[:email], step[:transaction_id]
+                send_email client_info,
+                           step[:email] || client_info[:username],
+                           step[:transaction_id],
+                           http
+                wait_for_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -419,9 +474,15 @@ def auth_fsm step, gui
             answer = gui.choose_oob step[:devices], step[:email]
             step = case answer
             when 0...step[:devices].size
-                send_push step[:devices][answer], step[:email], step[:transaction_id]
+                device = step[:devices][answer]
+                send_push client_info, device, step[:transaction_id], http
+                wait_for_oob device, step[:email], step[:transaction_id]
             when :email
-                send_email step[:email], step[:transaction_id]
+                send_email client_info,
+                           step[:email] || client_info[:username],
+                           step[:transaction_id],
+                           http
+                wait_for_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -596,7 +657,7 @@ def open_vault config, http, gui
     whats_next = auth_step2 client_info, config["password"], transaction_id, http
 
     # Auth FSM
-    result = auth_fsm whats_next, gui
+    result = auth_fsm client_info, whats_next, gui, http
 end
 
 #
