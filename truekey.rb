@@ -112,7 +112,6 @@ def register_new_device device_name, http
 
     result = {
         token: parsed["clientToken"],
-        name: device_name,
         id: parsed["tkDeviceId"]
     }
     raise "Invalid response" if result.values.include? nil
@@ -121,7 +120,7 @@ def register_new_device device_name, http
 end
 
 # Returns OAuth transaction id that is used in the next step
-def auth_step1 username, device_info, http
+def auth_step1 client_info, http
     mock_response = {
         "oAuthTransId"    => "6cdfcd43-065c-43a1-aa7a-017de98eefd0",
         "responseResult"  => {
@@ -137,7 +136,7 @@ def auth_step1 username, device_info, http
         data: {
             contextData: {
                 deviceInfo: {
-                          deviceName: device_info[:name],
+                          deviceName: client_info[:name],
                     devicePlatformID: 7, # MacOS (see DevicePlatformType)
                           deviceType: 5, # Mac (see DeviceType)
                 },
@@ -148,10 +147,10 @@ def auth_step1 username, device_info, http
                       culture: "en-US",
             },
             userData: {
-                email: username,
+                email: client_info[:username],
             },
             ysvcData: {
-                deviceId: device_info[:id],
+                deviceId: client_info[:id],
             }
         }
     }, {}, mock_response
@@ -166,7 +165,7 @@ def auth_step1 username, device_info, http
 end
 
 # Returns instructions on what to do next
-def auth_step2 username, password, device_info, step1_transaction_id, http
+def auth_step2 client_info, password, step1_transaction_id, http
     mock_response_with_one_oob = {
         "refreshTokenExpiry" => 0.0,
             "responseResult" => {
@@ -262,15 +261,15 @@ def auth_step2 username, password, device_info, step1_transaction_id, http
 
     response = http.post_json "https://truekeyapi.intelsecurity.com/mp/auth", {
         userData: {
-                   email: username,
+                   email: client_info[:username],
             oAuthTransId: step1_transaction_id,
-                     pwd: hash_password(username, password),
+                     pwd: hash_password(client_info[:username], password),
         },
         deviceData: {
-                      deviceId: device_info[:id],
+                      deviceId: client_info[:id],
                     deviceType: "mac",
             devicePlatformType: "macos",
-                       otpData: generate_random_otp(device_info[:otp_info])
+                       otpData: generate_random_otp(client_info[:otp_info])
         }
     }, {}, mock_response_with_two_oobs
 
@@ -559,23 +558,35 @@ end
 # Vault
 #
 
-def open_vault username, password, http, gui
+def open_vault config, http, gui
+    client_info = {
+        username: config["username"],
+            name: "truekey-ruby",
+           token: config["token"],
+              id: config["id"],
+    }
+
     # Step 1: register a new device and get a token and an id back
-    device_info = register_new_device "truekey-ruby", http
+    if client_info[:token].nil? || client_info[:id].nil?
+        device_info = register_new_device client_info[:name], http
+
+        client_info[:token] = device_info[:token]
+        client_info[:id] = device_info[:id]
+    end
 
     # Step 2: parse the token to decode OTP information
-    device_info[:otp_info] = parse_client_token device_info[:token]
+    client_info[:otp_info] = parse_client_token client_info[:token]
 
     # Step 3: validate the OTP info to make sure it's got only the things we support at the moment
-    validate_otp_info device_info[:otp_info]
+    validate_otp_info client_info[:otp_info]
 
     # Step 4: auth step 1 gives us a transaction id to pass along to the next step
-    transaction_id = auth_step1 username, device_info, http
+    transaction_id = auth_step1 client_info, http
 
     # Step 5: auth step 2 gives us instructions what to do next. For a new client that would
     #         be some form of second factor auth. For a known client that would be a pair of
     #         OAuth tokens.
-    whats_next = auth_step2 username, password, device_info, transaction_id, http
+    whats_next = auth_step2 client_info, config["password"], transaction_id, http
 
     # Auth FSM
     result = auth_fsm whats_next, gui
@@ -585,6 +596,8 @@ end
 # main
 #
 
+# Simple Gui implementation
+# TODO: Add resend and email options
 class TextGui < Gui
     def wait_for_email email
         puts "Please check your email '#{email}' and confirm"
@@ -611,4 +624,4 @@ config = YAML::load_file "config.yaml"
 http = Http.new :default
 gui = TextGui.new
 
-ap open_vault config["username"], config["password"], http, gui
+ap open_vault config, http, gui
