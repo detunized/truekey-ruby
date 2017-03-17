@@ -8,6 +8,8 @@ require "yaml"
 require "httparty"
 require "securerandom"
 
+# TODO: Remove mock responses and put in the tests
+
 #
 # Network
 #
@@ -165,6 +167,99 @@ end
 
 # Returns instructions on what to do next
 def auth_step2 username, password, device_info, step1_transaction_id, http
+    mock_response_with_one_oob = {
+        "refreshTokenExpiry" => 0.0,
+            "responseResult" => {
+                   "isSuccess" => true,
+                   "errorCode" => nil,
+            "errorDescription" => nil,
+               "transactionId" => "296264da-50a5-4d32-b9ab-c086f360093b"
+        },
+          "riskAnalysisInfo" => {
+                   "nextStep" => 12,
+                     "flowId" => nil,
+               "nextStepData" => {
+                       "oobDevices" => [
+                    {
+                            "deviceId" => "MTU5NjAwMjI3MQP04dNsmSNQ2LOPWrIep" +
+                                          "KI6ra8lkjoubkr1B9TMpWSSytkNsFK2n/" +
+                                          "utQGl+8giXPuzWxS+p9GSPvBQPE2444eZ" +
+                                          "gyDogtwq3vWKX2ayAvmEj1G198GiDmjfj" +
+                                          "XpkMq41hQYU=",
+                          "deviceName" => "LGE Nexus 5",
+                        "oobPreferred" => false
+                    }
+                ],
+                "verificationEmail" => "username@example.com",
+                   "bcaResyncToken" => nil
+            },
+                "altNextStep" => 14,
+                "bcaNextStep" => 0,
+            "bcaNextStepData" => nil
+        },
+                  "authCode" => nil,
+               "redirectUrl" => nil,
+                     "state" => nil,
+                  "cloudKey" => nil,
+                   "idToken" => nil,
+              "uasTokenInfo" => nil,
+              "oAuthTransId" => "ae830c59-634b-437c-95b6-58158e85ffae",
+             "activeSession" => false,
+             "templateCount" => 0,
+              "refreshToken" => nil
+    }
+
+    mock_response_with_two_oobs = {
+        "refreshTokenExpiry" => 0.0,
+            "responseResult" => {
+                   "isSuccess" => true,
+                   "errorCode" => nil,
+            "errorDescription" => nil,
+               "transactionId" => "5105155e-fbbc-4a7c-bb3d-455f968e147d"
+        },
+          "riskAnalysisInfo" => {
+                   "nextStep" => 13,
+                     "flowId" => nil,
+               "nextStepData" => {
+                       "oobDevices" => [
+                    {
+                            "deviceId" => "MTU5NjAwMjI3MQA+h3kH+ff/bO2MmXl7d" +
+                                          "DMZQwwFnt9jztLUMGHXCWnCNSkhJKI14M" +
+                                          "bCduOPZLtWarN6p3g2ZxqSxRNZyjfCTuH" +
+                                          "RAAGbPdhu400VYpzU/liw/97TpuVdczqq" +
+                                          "uX78IKwLRZ8=",
+                          "deviceName" => "OnePlus ONEPLUS A3003",
+                        "oobPreferred" => false
+                    },
+                    {
+                            "deviceId" => "MTU5NjAwMjI3MQCRJ1PS9YAIdsEjGormP" +
+                                          "lvrxG3d872WvUjVOgLISXKftAD++bFzfV" +
+                                          "zSdOCQhPK0iVyw0bTUxxgJH+5puKJZYfe" +
+                                          "EortnUXDYmmV6VYwuX0p5+weSuI5Tt4RS" +
+                                          "VpRrhueCK6g=",
+                          "deviceName" => "LGE Nexus 5",
+                        "oobPreferred" => false
+                    }
+                ],
+                "verificationEmail" => "username@example.com",
+                   "bcaResyncToken" => nil
+            },
+                "altNextStep" => 14,
+                "bcaNextStep" => 0,
+            "bcaNextStepData" => nil
+        },
+                  "authCode" => nil,
+               "redirectUrl" => nil,
+                     "state" => nil,
+                  "cloudKey" => nil,
+                   "idToken" => nil,
+              "uasTokenInfo" => nil,
+              "oAuthTransId" => "c1a79e3d-6c4d-432c-a85b-17f9c76f9f66",
+             "activeSession" => false,
+             "templateCount" => 0,
+              "refreshToken" => nil
+    }
+
     response = http.post_json "https://truekeyapi.intelsecurity.com/mp/auth", {
         userData: {
                    email: username,
@@ -177,10 +272,153 @@ def auth_step2 username, password, device_info, step1_transaction_id, http
             devicePlatformType: "macos",
                        otpData: generate_random_otp(device_info[:otp_info])
         }
-    }
+    }, {}, mock_response_with_two_oobs
 
-    # TODO: Parse this!
-    response.parsed_response
+    parsed = response.parsed_response
+    raise "Request failed" if !parsed["responseResult"]["isSuccess"]
+
+    parse_auth_step_response parsed
+end
+
+#
+# Auth FSM
+#
+
+def wait_for_email email
+    {
+        state: :wait_for_email,
+        done: false,
+        valid_answers: [:check, :resend],
+        email: email,
+    }
+end
+
+def wait_for_oob device, email
+    {
+        state: :wait_for_oob,
+        done: false,
+        valid_answers: [:check, :resend, :email],
+        device: device,
+        email: email,
+    }
+end
+
+def choose_oob devices, email
+    {
+        state: :choose_oob,
+        done: false,
+        valid_answers: [0...devices.size].to_a + [:email],
+        devices: devices,
+        email: email,
+    }
+end
+
+def done oauth_token
+    {
+        state: :done,
+        done: true,
+        oauth_token: oauth_token,
+    }
+end
+
+def failure
+    {
+        state: :failure,
+        done: true,
+    }
+end
+
+def auth_check
+    done "..."
+end
+
+def send_email email
+    puts "Sending email to #{email}"
+
+    wait_for_email email
+end
+
+def send_push device, email
+    puts "Sending push message to #{device[:name]}"
+
+    wait_for_oob device, email
+end
+
+class Gui
+    def wait_for_email email
+        [:check, :resend][0]
+    end
+
+    def wait_for_oob device, email
+        [:check, :resend, :email][0]
+    end
+
+    def choose_oob devices, email
+        [0, 1, :email][0]
+    end
+end
+
+def parse_auth_step_response response
+    ra = response["riskAnalysisInfo"]
+    next_step = ra["nextStep"]
+
+    case next_step
+    when 0, 10
+        done response["idToken"]
+    when 12
+        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"]
+    when 13
+        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"]
+    when 14
+        wait_for_email ra["verificationEmail"]
+    else
+        raise "Next two factor step #{next_step} is not supported"
+    end
+end
+
+def parse_devices device_info
+    device_info.map { |i| {id: i["deviceId"], name: i["deviceName"]} }
+end
+
+def auth_fsm step, gui
+    while !step[:done]
+        case step[:state]
+        when :wait_for_email
+            answer = gui.wait_for_email step[:email]
+            step = case answer
+            when :check
+                auth_check
+            when :resend
+                send_email step[:email]
+            else
+                raise "Invalid answer"
+            end
+        when :wait_for_oob
+            answer = gui.wait_for_oob step[:device], step[:email]
+            step = case answer
+            when :check
+                auth_check
+            when :resend
+                send_push step[:device], step[:email]
+            when :email
+                send_email step[:email]
+            else
+                raise "Invalid answer"
+            end
+        when :choose_oob
+            answer = gui.choose_oob step[:devices], step[:email]
+            step = case answer
+            when 0...step[:devices].size
+                send_push step[:devices][answer], step[:email]
+            when :email
+                send_email step[:email]
+            else
+                raise "Invalid answer"
+            end
+        end
+    end
+
+    step
 end
 
 #
@@ -314,29 +552,59 @@ def hash_password username, password
 end
 
 #
+# Vault
+#
+
+def open_vault username, password, http, gui
+    # Step 1: register a new device and get a token and an id back
+    device_info = register_new_device "truekey-ruby", http
+
+    # Step 2: parse the token to decode OTP information
+    device_info[:otp_info] = parse_client_token device_info[:token]
+
+    # Step 3: validate the OTP info to make sure it's got only the things we support at the moment
+    validate_otp_info device_info[:otp_info]
+
+    # Step 4: auth step 1 gives us a transaction id to pass along to the next step
+    transaction_id = auth_step1 username, device_info, http
+
+    # Step 5: auth step 2 gives us instructions what to do next. For a new client that would
+    #         be some form of second factor auth. For a known client that would be a pair of
+    #         OAuth tokens.
+    whats_next = auth_step2 username, password, device_info, transaction_id, http
+
+    # Auth FSM
+    result = auth_fsm whats_next, gui
+end
+
+#
 # main
 #
 
+class TextGui < Gui
+    def wait_for_email email
+        puts "Please check your email '#{email}' and confirm"
+        gets
+        :check
+    end
+
+    def wait_for_oob device, email
+        puts "Please check #{device[:name]} and confirm"
+        gets
+        :check
+    end
+
+    def choose_oob devices, email
+        puts "Please choose second factor device:"
+        devices.each_with_index do |d, i|
+            puts " - #{i + 1}: #{d[:name]}"
+        end
+        gets.to_i - 1
+    end
+end
+
 config = YAML::load_file "config.yaml"
+http = Http.new :default
+gui = TextGui.new
 
-http = Http.new :force_online
-
-# Step 1: register a new device and get a token and an id back
-device_info = register_new_device "truekey-ruby", http
-
-# Step 2: parse the token to decode OTP information
-device_info[:otp_info] = parse_client_token device_info[:token]
-
-# Step 3: validate the OTP info to make sure it's got only the things we support at the moment
-validate_otp_info device_info[:otp_info]
-
-# Step 4: auth step 1 gives us a transaction id to pass along to the next step
-transaction_id = auth_step1 config["username"], device_info, http
-
-# Step 5: auth step 2 gives us instructions what to do next. For a new client that would
-#         be some form of second factor auth. For a known client that would be a pair of
-#         OAuth tokens.
-whats_next = auth_step2 config["username"], config["password"], device_info, transaction_id, http
-
-# WIP
-ap whats_next
+ap open_vault config["password"], config["username"], http, gui
