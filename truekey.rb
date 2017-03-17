@@ -119,6 +119,31 @@ def register_new_device device_name, http
     result
 end
 
+def make_common_request client_info, response_type
+    {
+        data: {
+            contextData: {
+                deviceInfo: {
+                          deviceName: client_info[:name],
+                    devicePlatformID: 7, # MacOS (see DevicePlatformType)
+                          deviceType: 5, # Mac (see DeviceType)
+                },
+            },
+            rpData: {
+                     clientId: "42a01655e65147c3b03721df36b45195",
+                response_type: response_type,
+                      culture: "en-US",
+            },
+            userData: {
+                email: client_info[:username],
+            },
+            ysvcData: {
+                deviceId: client_info[:id],
+            }
+        }
+    }
+end
+
 # Returns OAuth transaction id that is used in the next step
 def auth_step1 client_info, http
     mock_response = {
@@ -132,28 +157,10 @@ def auth_step1 client_info, http
         "riskAnalysisInfo" => nil
     }
 
-    response = http.post_json "https://truekeyapi.intelsecurity.com/session/auth", {
-        data: {
-            contextData: {
-                deviceInfo: {
-                          deviceName: client_info[:name],
-                    devicePlatformID: 7, # MacOS (see DevicePlatformType)
-                          deviceType: 5, # Mac (see DeviceType)
-                },
-            },
-            rpData: {
-                     clientId: "42a01655e65147c3b03721df36b45195",
-                response_type: "session_id_token",
-                      culture: "en-US",
-            },
-            userData: {
-                email: client_info[:username],
-            },
-            ysvcData: {
-                deviceId: client_info[:id],
-            }
-        }
-    }, {}, mock_response
+    response = http.post_json "https://truekeyapi.intelsecurity.com/session/auth",
+                              make_common_request(client_info, "session_id_token"),
+                              {},
+                              mock_response
 
     parsed = response.parsed_response
     raise "Request failed" if !parsed["responseResult"]["isSuccess"]
