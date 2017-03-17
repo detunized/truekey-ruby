@@ -284,32 +284,35 @@ end
 # Auth FSM
 #
 
-def wait_for_email email
+def wait_for_email email, transaction_id
     {
         state: :wait_for_email,
         done: false,
         valid_answers: [:check, :resend],
         email: email,
+        transaction_id: transaction_id,
     }
 end
 
-def wait_for_oob device, email
+def wait_for_oob device, email, transaction_id
     {
         state: :wait_for_oob,
         done: false,
         valid_answers: [:check, :resend, :email],
         device: device,
         email: email,
+        transaction_id: transaction_id,
     }
 end
 
-def choose_oob devices, email
+def choose_oob devices, email, transaction_id
     {
         state: :choose_oob,
         done: false,
         valid_answers: [0...devices.size].to_a + [:email],
         devices: devices,
         email: email,
+        transaction_id: transaction_id,
     }
 end
 
@@ -332,16 +335,16 @@ def auth_check
     done "..."
 end
 
-def send_email email
+def send_email email, transaction_id
     puts "Sending email to #{email}"
 
-    wait_for_email email
+    wait_for_email email, transaction_id
 end
 
-def send_push device, email
+def send_push device, email, transaction_id
     puts "Sending push message to #{device[:name]}"
 
-    wait_for_oob device, email
+    wait_for_oob device, email, transaction_id
 end
 
 class Gui
@@ -366,11 +369,11 @@ def parse_auth_step_response response
     when 0, 10
         done response["idToken"]
     when 12
-        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"]
+        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"], response["transactionId"]
     when 13
-        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"]
+        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"], response["transactionId"]
     when 14
-        wait_for_email ra["verificationEmail"]
+        wait_for_email ra["verificationEmail"], response["transactionId"]
     else
         raise "Next two factor step #{next_step} is not supported"
     end
@@ -390,7 +393,7 @@ def auth_fsm step, gui
             when :check
                 auth_check
             when :resend
-                send_email step[:email]
+                send_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -400,9 +403,9 @@ def auth_fsm step, gui
             when :check
                 auth_check
             when :resend
-                send_push step[:device], step[:email]
+                send_push step[:device], step[:email], step[:transaction_id]
             when :email
-                send_email step[:email]
+                send_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -410,9 +413,9 @@ def auth_fsm step, gui
             answer = gui.choose_oob step[:devices], step[:email]
             step = case answer
             when 0...step[:devices].size
-                send_push step[:devices][answer], step[:email]
+                send_push step[:devices][answer], step[:email], step[:transaction_id]
             when :email
-                send_email step[:email]
+                send_email step[:email], step[:transaction_id]
             else
                 raise "Invalid answer"
             end
