@@ -43,6 +43,10 @@ class Http
     end
 
     def post_json url, args, headers = {}, mock_response = nil
+        puts "=" * 80
+        ap url
+        ap args
+
         post url,
              args.to_json,
              headers.merge({"Content-Type" => "application/json"}),
@@ -347,8 +351,100 @@ def failure
     }
 end
 
-def auth_check
-    done "..."
+def auth_check client_info, transaction_id, http
+    mock_response_success = {
+              "refreshToken" => "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIiwidmV" +
+                                "yc2lvbiI6MX0..GUk1Usj-H1kS0cG5.Z5qVcr5BcrpC" +
+                                "aMLHyoxeO_k0PBqSS3Xgi05PyjP1EIOSns9B73JgLfP" +
+                                "FBHj28F0e0zfct4Kriwh_oUjHvUOw_t2AM8LcVqI3jm" +
+                                "hW05In_4KRqNb64AovO2JYoUL4CQNmgqpzz2kuKMFQV" +
+                                "46NGagrrEvK7eg27HGMLRRpa4wCL_Bu8dBhCn_MbbMW" +
+                                "WNN35hBp3deJ6h41B4XZIw5Saf5iisSNun62zy6QIDb" +
+                                "hsFzHpSW8fQmka2E4sZ7ip3aBFUF2vr8Ff4MQOHEo5n" +
+                                "LJwF5nMwrqj8vBYxzPN72TwrwBjeKceFmrxsp1CoZB1" +
+                                "5SewGTuFMXrlYM7XVDNt6AUSa_uQBAqrCLnyWvfzvI4" +
+                                "jon37t0GipdDAcV88qwfnWpcGkFREbiBSu37QOBB6rR" +
+                                "aRN3Ao9Yge15WG2RYyP-nkDwiBgJgIYNlkkVSUINOAW" +
+                                "uOODsNPqPSOzrVMNoLa6cn-pWcQBORFH0uxLHJZtr40" +
+                                "jpfmsBk70hFnKJMA2SONYDzXpqKEqPXNEQRTLPNL_F9" +
+                                "9bSnOeW7IXfrn_Nva5lWCwSvwEcB3xCPp1XRbf8nmjB" +
+                                "FBemtr5lSNrOTaBcU5nSnXagm8rPaS956VAzupkGNR1" +
+                                "SNNqaqAip78crDQG2-OEdaYDB6in0.yKq6sGLfBUr6c" +
+                                "Lanaons6g",
+        "refreshTokenExpiry" => 0.0,
+            "ResponseResult" => {
+                   "IsSuccess" => true,
+                   "ErrorCode" => nil,
+            "ErrorDescription" => nil,
+               "TransactionId" => nil
+        },
+                  "nextStep" => 10,
+              "NextStepData" => nil,
+                  "authCode" => nil,
+               "redirectUri" => nil,
+                   "idToken" => "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI" +
+                                "6IllBUF9UUlVFS0VZX1BST0RfMDEifQ.eyJzdWIiOiI" +
+                                "5ZTQ0ZmViNy1mZTRlLTQzODMtYWQ5Ny0zZWFmZWNiZD" +
+                                "Q3MmYiLCJub25jZSI6IiIsImlzX3ByZW1pdW0iOiJmY" +
+                                "WxzZSIsImlzcyI6Imh0dHBzOi8vaW50ZWxzZWN1cml0" +
+                                "eS5jb20iLCJhdWQiOiI0MmEwMTY1NWU2NTE0N2MzYjA" +
+                                "zNzIxZGYzNmI0NTE5NSIsImV4cCI6MTQ4OTc3NTIzMy" +
+                                "wibmJmIjoxNDg5NzcxNjMzLCJpYXQiOjE0ODk3NzE2M" +
+                                "zQsImF1dGhfdGltZSI6MTQ4OTc3MTYzNCwiZW1haWwi" +
+                                "OiJsYXN0cGFzcy5ydWJ5QGdtYWlsLmNvbSIsImVtYWl" +
+                                "sX3ZlcmlmaWVkIjoidHJ1ZSIsImRldmljZV9pZCI6Ij" +
+                                "YxYWE0M2I5ZWNlMTgwMjVhNjhkNmQxY2Y5ZjdkODI0Z" +
+                                "GNjZDY1MGQ0NzBjMjc5NDhlYTQyYzg4ZjVlNzE0ODk0" +
+                                "MTA4MDciLCJhY2Nlc3NfdHlwZSI6WyJkZWZhdWx0Il1" +
+                                "9.PyuQVBg3GIjaMa12VAC6BxDKPpudeuKxzMYDw19po" +
+                                "KjWcE2pM55vl0jBNSYtf88qHC4ZcXKpKX6uWycmVxZx" +
+                                "WZdJt4xpgACbA0JjUMkZZHC5m-sARneR90iV8PPN8-M" +
+                                "r4zwmr0WR28EU0XAe62AGzAuPYnJwoJ_-55k4ZGR46R" +
+                                "SHG4LjYwVeh997eSURoEgsORTki9q3-10j_5m30aOFF" +
+                                "1DimX29PRkZS5SOK2ThApJq6vg3GrChcxJ82MCljr7C" +
+                                "CK1z7GTDW0gGjiURiICQHyzepW27SRByFacrgTCGRpu" +
+                                "xE06gvIzJBMRHTPVNlBk-h-7xeummbWVr8v-InsSWOw",
+                     "state" => nil,
+                  "cloudKey" => "5b33074068c3be15776b6c4c536a2a848ae4a5a0bc7" +
+                                "f6a1c3922b0b984fc6f06",
+           "isTrustedDevice" => false,
+              "uasTokenInfo" => {
+              "authToken" => "11-3-1489771633",
+            "attestation" => nil,
+                  "nonce" => nil
+        }
+    }
+
+    mock_response_pending = {
+              "refreshToken" => nil,
+        "refreshTokenExpiry" => 0.0,
+            "ResponseResult" => {
+                   "IsSuccess" => false,
+                   "ErrorCode" => "E3013",
+            "ErrorDescription" => "Authentication Pending",
+               "TransactionId" => nil
+        },
+                  "nextStep" => 0,
+              "NextStepData" => nil,
+                  "authCode" => nil,
+               "redirectUri" => nil,
+                   "idToken" => nil,
+                     "state" => nil,
+                  "cloudKey" => nil,
+           "isTrustedDevice" => false,
+              "uasTokenInfo" => nil
+    }
+
+    args = make_common_request client_info, "code", transaction_id
+    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                              args,
+                              {},
+                              mock_response_success
+
+    parsed = response.parsed_response
+    ensure_success parsed
+
+    parse_auth_step_response parsed
 end
 
 def send_email client_info, email, transaction_id, http
@@ -418,7 +514,7 @@ def parse_auth_step_response response
     next_step = ra["nextStep"]
 
     case next_step
-    when 0, 10
+    when 10
         done response["idToken"]
     when 12
         wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"], response["oAuthTransId"]
@@ -443,7 +539,7 @@ def auth_fsm client_info, step, gui, http
             answer = gui.wait_for_email step[:email]
             step = case answer
             when :check
-                auth_check
+                auth_check client_info, step[:transaction_id], http
             when :resend
                 send_email client_info,
                            step[:email] || client_info[:username],
@@ -457,7 +553,7 @@ def auth_fsm client_info, step, gui, http
             answer = gui.wait_for_oob step[:device], step[:email]
             step = case answer
             when :check
-                auth_check
+                auth_check client_info, step[:transaction_id], http
             when :resend
                 send_push client_info, step[:device], step[:transaction_id], http
                 wait_for_oob step[:device], step[:email], step[:transaction_id]
