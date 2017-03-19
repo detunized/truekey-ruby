@@ -20,15 +20,17 @@ require "securerandom"
 # they often check multiple versions, like OOBDevices vs oobDevices or
 # NextStep vs nextStep and so on.
 class CaseInsensitiveHash
-    def initialize hash = {}
+    def initialize hash = nil
         @storage = {}
-        hash.each do |k, v|
+        (hash || {}).each do |k, v|
             @storage[k.downcase] = convert v
         end
     end
 
-    def [] key
-        @storage[key.downcase]
+    def [] path
+        path.downcase.split("/").reduce @storage do |h, i|
+            (h || {})[i]
+        end
     end
 
     def to_hash
