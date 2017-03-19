@@ -64,6 +64,7 @@ class Http
     #  - :force_offline: never go online and return mock even if it's nil
     def initialize network_mode = :default
         @network_mode = network_mode
+        @log = true
     end
 
     def get url, headers = {}, mock_response = nil
@@ -83,15 +84,33 @@ class Http
         }
     end
 
+    # Expects JSON in response. Parses and converts it to CaseInsensitiveHash.
+    # Also checks for operation result and throws on failure. Also throws on
+    # HTTP error.
     def post_json url, args, headers = {}, mock_response = nil
-        puts "=" * 80
-        ap url
-        ap args
+        if @log
+            puts "=" * 80
+            puts "Request to #{url}"
+            ap args
+        end
 
-        post url,
+        response = post url,
              args.to_json,
              headers.merge({"Content-Type" => "application/json"}),
              mock_response
+
+        if @log
+            puts "-" * 40
+            puts "HTTP: #{response.code}"
+            ap response.parsed_response
+        end
+
+        raise "Request failed with code #{response.code}" if !response.success?
+
+        json = CaseInsensitiveHash.new response.parsed_response
+        raise "Request failed" if !json["responseResult/isSuccess"]
+
+        json
     end
 
     def should_return_mock? mock_response
@@ -108,8 +127,8 @@ class Http
     end
 
     def make_response mock_response
-        @response_class ||= Struct.new :parsed_response
-        @response_class.new mock_response
+        @response_class ||= Struct.new :parsed_response, :code, :success?
+        @response_class.new mock_response, 200, true
     end
 end
 
