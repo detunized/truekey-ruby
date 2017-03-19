@@ -10,6 +10,45 @@ require "securerandom"
 
 # TODO: Remove mock responses and put in the tests
 
+# Case insensitive hash map with read-only access. It's very very simple.
+# It's made to convert from a parsed JSON hash map. The conversion takes
+# care of the nested data. Only hashes and vectors are supported. Normal
+# JSON shouldn't have anything else anyway.
+#
+# This is needed since Intel cannot get their engineering together and
+# figure out how they want to name their identifiers. In the original code
+# they often check multiple versions, like OOBDevices vs oobDevices or
+# NextStep vs nextStep and so on.
+class CaseInsensitiveHash
+    def initialize hash = {}
+        @storage = {}
+        hash.each do |k, v|
+            @storage[k.downcase] = convert v
+        end
+    end
+
+    def [] key
+        @storage[key.downcase]
+    end
+
+    def to_hash
+        @storage
+    end
+
+    private
+
+    def convert value
+        case value
+        when Array
+            value.map { |e| convert e }
+        when Hash
+            CaseInsensitiveHash.new value
+        else
+            value
+        end
+    end
+end
+
 #
 # Network
 #
