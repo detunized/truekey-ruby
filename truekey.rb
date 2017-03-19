@@ -171,12 +171,9 @@ def register_new_device device_name, http
            oathTokenType: 1
     }, {}, mock_response
 
-    parsed = response.parsed_response
-    raise "Request failed" if !parsed["responseResult"]["isSuccess"]
-
     result = {
-        token: parsed["clientToken"],
-        id: parsed["tkDeviceId"]
+        token: response["clientToken"],
+        id: response["tkDeviceId"]
     }
     raise "Invalid response" if result.values.include? nil
 
@@ -209,15 +206,6 @@ def make_common_request client_info, response_type, transaction_id = ""
     }
 end
 
-def success? response
-    r = response["responseResult"] || response["ResponseResult"] || {}
-    r["isSuccess"] || r["IsSuccess"]
-end
-
-def ensure_success response
-    raise "Request failed" if !success? response
-end
-
 # Returns OAuth transaction id that is used in the next step
 def auth_step1 client_info, http
     mock_response = {
@@ -236,10 +224,7 @@ def auth_step1 client_info, http
                               {},
                               mock_response
 
-    parsed = response.parsed_response
-    raise "Request failed" if !parsed["responseResult"]["isSuccess"]
-
-    transaction_id = parsed["oAuthTransId"]
+    transaction_id = response["oAuthTransId"]
     raise "Request failed" if transaction_id == nil
 
     transaction_id
@@ -354,10 +339,7 @@ def auth_step2 client_info, password, step1_transaction_id, http
         }
     }, {}, mock_response_with_two_oobs
 
-    parsed = response.parsed_response
-    raise "Request failed" if !parsed["responseResult"]["isSuccess"]
-
-    parse_auth_step_response parsed
+    parse_auth_step_response response
 end
 
 #
@@ -496,15 +478,10 @@ def auth_check client_info, transaction_id, http
     }
 
     args = make_common_request client_info, "code", transaction_id
-    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
-                              args,
-                              {},
-                              mock_response_success
-
-    parsed = response.parsed_response
-    ensure_success parsed
-
-    parse_auth_step_response parsed
+    http.post_json "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                   args,
+                   {},
+                   mock_response_success
 end
 
 def send_email client_info, email, transaction_id, http
@@ -523,12 +500,10 @@ def send_email client_info, email, transaction_id, http
         RecipientId: email,
     }
 
-    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
-                              args,
-                              {},
-                              mock_response
-
-    ensure_success response.parsed_response
+    http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                   args,
+                   {},
+                   mock_response
 end
 
 def send_push client_info, device, transaction_id, http
@@ -547,12 +522,10 @@ def send_push client_info, device, transaction_id, http
         RecipientId: device[:id],
     }
 
-    response = http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
-                              args,
-                              {},
-                              mock_response
-
-    ensure_success response.parsed_response
+    http.post_json "https://truekeyapi.intelsecurity.com/sp/oob/v1/son",
+                   args,
+                   {},
+                   mock_response
 end
 
 class Gui
@@ -577,9 +550,9 @@ def parse_auth_step_response response
     when 10
         done response["idToken"]
     when 12
-        wait_for_oob parse_devices(ra["nextStepData"]["oobDevices"])[0], ra["verificationEmail"], response["oAuthTransId"]
+        wait_for_oob parse_devices(ra["nextStepData/oobDevices"])[0], ra["verificationEmail"], response["oAuthTransId"]
     when 13
-        choose_oob parse_devices(ra["nextStepData"]["oobDevices"]), ra["verificationEmail"], response["oAuthTransId"]
+        choose_oob parse_devices(ra["nextStepData/oobDevices"]), ra["verificationEmail"], response["oAuthTransId"]
     when 14
         wait_for_email ra["verificationEmail"], response["oAuthTransId"]
     else
