@@ -584,7 +584,7 @@ end
 
 # TODO: This is probably better done with some classes rather then a giant switch
 def auth_fsm client_info, step, gui, http
-    while !step[:done]
+    loop do
         case step[:state]
         when :wait_for_email
             answer = gui.wait_for_email step[:email]
@@ -656,10 +656,12 @@ def auth_fsm client_info, step, gui, http
             else
                 raise "Invalid answer"
             end
+        when :failure
+            raise "Authentication failed"
+        when :done
+            return step[:oauth_token]
         end
     end
-
-    step
 end
 
 #
@@ -827,7 +829,7 @@ def open_vault config, http, gui
     whats_next = auth_step2 client_info, config["password"], transaction_id, http
 
     # Auth FSM
-    result = auth_fsm client_info, whats_next, gui, http
+    oauth_token = auth_fsm client_info, whats_next, gui, http
 end
 
 #
@@ -887,7 +889,7 @@ class TextGui < Gui
 end
 
 config = YAML::load_file "config.yaml"
-http = Http.new :default
+http = Http.new :force_offline
 gui = TextGui.new
 
 ap open_vault config, http, gui
