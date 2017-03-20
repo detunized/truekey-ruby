@@ -70,9 +70,26 @@ class Http
     def get url, headers = {}, mock_response = nil
         return make_response mock_response if should_return_mock? mock_response
 
-        self.class.get url, {
-            headers: headers
-        }
+        self.class.get url, {headers: headers}
+    end
+
+    def get_json url, headers = {}, mock_response = nil
+        if @log
+            puts "=" * 80
+            puts "GET to #{url}"
+        end
+
+        response = get url, headers, mock_response
+
+        if @log
+            puts "-" * 40
+            puts "HTTP: #{response.code}"
+            ap response.parsed_response
+        end
+
+        raise "Request failed with code #{response.code}" if !response.success?
+
+        response.parsed_response
     end
 
     def post url, args, headers = {}, mock_response = nil
@@ -99,7 +116,7 @@ class Http
     def post_json_no_check url, args, headers = {}, mock_response = nil
         if @log
             puts "=" * 80
-            puts "Request to #{url}"
+            puts "POST to #{url}"
             ap args
         end
 
