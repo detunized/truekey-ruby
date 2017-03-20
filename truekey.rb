@@ -813,7 +813,9 @@ class TextGui < Gui
         devices.each_with_index do |d, i|
             puts " - #{i + 1}: #{d[:name]}"
         end
-        gets.to_i - 1
+        puts " - e: send email to #{email}"
+        input = gets.strip
+        input == "e" ? :email : input.to_i - 1
     end
 end
 
