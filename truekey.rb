@@ -550,11 +550,16 @@ def parse_auth_step_response response
     when 10
         done response["idToken"]
     when 12
-        wait_for_oob parse_devices(data["oobDevices"])[0], data["verificationEmail"], response["oAuthTransId"]
+        wait_for_oob parse_devices(data["oobDevices"])[0],
+                     data["verificationEmail"],
+                     response["oAuthTransId"]
     when 13
-        choose_oob parse_devices(data["oobDevices"]), data["verificationEmail"], response["oAuthTransId"]
+        choose_oob parse_devices(data["oobDevices"]),
+                   data["verificationEmail"],
+                   response["oAuthTransId"]
     when 14
-        wait_for_email data["verificationEmail"], response["oAuthTransId"]
+        wait_for_email data["verificationEmail"],
+                       response["oAuthTransId"]
     else
         raise "Next two factor step #{next_step} is not supported"
     end
@@ -572,13 +577,17 @@ def auth_fsm client_info, step, gui, http
             answer = gui.wait_for_email step[:email]
             step = case answer
             when :check
-                auth_check client_info, step[:transaction_id], http
+                auth_check client_info,
+                           step[:transaction_id],
+                           http
             when :resend
                 send_email client_info,
                            step[:email] || client_info[:username],
                            step[:transaction_id],
                            http
-                wait_for_email step[:email], step[:transaction_id]
+
+                wait_for_email step[:email],
+                               step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -586,16 +595,26 @@ def auth_fsm client_info, step, gui, http
             answer = gui.wait_for_oob step[:device], step[:email]
             step = case answer
             when :check
-                auth_check client_info, step[:transaction_id], http
+                auth_check client_info,
+                           step[:transaction_id],
+                           http
             when :resend
-                send_push client_info, step[:device], step[:transaction_id], http
-                wait_for_oob step[:device], step[:email], step[:transaction_id]
+                send_push client_info,
+                          step[:device],
+                          step[:transaction_id],
+                          http
+
+                wait_for_oob step[:device],
+                             step[:email],
+                             step[:transaction_id]
             when :email
                 send_email client_info,
                            step[:email] || client_info[:username],
                            step[:transaction_id],
                            http
-                wait_for_email step[:email], step[:transaction_id]
+
+                wait_for_email step[:email],
+                               step[:transaction_id]
             else
                 raise "Invalid answer"
             end
@@ -604,14 +623,23 @@ def auth_fsm client_info, step, gui, http
             step = case answer
             when 0...step[:devices].size
                 device = step[:devices][answer]
-                send_push client_info, device, step[:transaction_id], http
-                wait_for_oob device, step[:email], step[:transaction_id]
+
+                send_push client_info,
+                          device,
+                          step[:transaction_id],
+                          http
+
+                wait_for_oob device,
+                             step[:email],
+                             step[:transaction_id]
             when :email
                 send_email client_info,
                            step[:email] || client_info[:username],
                            step[:transaction_id],
                            http
-                wait_for_email step[:email], step[:transaction_id]
+
+                wait_for_email step[:email],
+                               step[:transaction_id]
             else
                 raise "Invalid answer"
             end
