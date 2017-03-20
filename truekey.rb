@@ -374,7 +374,7 @@ end
 def choose_oob devices, email, transaction_id
     {
         state: :choose_oob,
-        valid_answers: [0...devices.size].to_a + [:email],
+        valid_answers: (0...devices.size).to_a + [:email],
         devices: devices,
         email: email,
         transaction_id: transaction_id,
@@ -578,11 +578,14 @@ def parse_devices device_info
 end
 
 # TODO: This is probably better done with some classes rather then a giant switch
+# TODO: Refactor this and DRY up
 def auth_fsm client_info, step, gui, http
     loop do
         case step[:state]
         when :wait_for_email
             answer = gui.wait_for_email step[:email]
+            raise "Invalid answer" if !step[:valid_answers].include? answer
+
             step = case answer
             when :check
                 auth_check client_info,
@@ -601,6 +604,8 @@ def auth_fsm client_info, step, gui, http
             end
         when :wait_for_oob
             answer = gui.wait_for_oob step[:device], step[:email]
+            raise "Invalid answer" if !step[:valid_answers].include? answer
+
             step = case answer
             when :check
                 auth_check client_info,
@@ -628,6 +633,8 @@ def auth_fsm client_info, step, gui, http
             end
         when :choose_oob
             answer = gui.choose_oob step[:devices], step[:email]
+            raise "Invalid answer" if !step[:valid_answers].include? answer
+
             step = case answer
             when 0...step[:devices].size
                 device = step[:devices][answer]
