@@ -543,18 +543,18 @@ class Gui
 end
 
 def parse_auth_step_response response
-    ra = response["riskAnalysisInfo"]
-    next_step = ra["nextStep"]
+    next_step = response["riskAnalysisInfo/nextStep"]
+    data = response["riskAnalysisInfo/nextStepData"]
 
     case next_step
     when 10
         done response["idToken"]
     when 12
-        wait_for_oob parse_devices(ra["nextStepData/oobDevices"])[0], ra["verificationEmail"], response["oAuthTransId"]
+        wait_for_oob parse_devices(data["oobDevices"])[0], data["verificationEmail"], response["oAuthTransId"]
     when 13
-        choose_oob parse_devices(ra["nextStepData/oobDevices"]), ra["verificationEmail"], response["oAuthTransId"]
+        choose_oob parse_devices(data["oobDevices"]), data["verificationEmail"], response["oAuthTransId"]
     when 14
-        wait_for_email ra["verificationEmail"], response["oAuthTransId"]
+        wait_for_email data["verificationEmail"], response["oAuthTransId"]
     else
         raise "Next two factor step #{next_step} is not supported"
     end
