@@ -822,28 +822,54 @@ end
 #
 
 # Simple Gui implementation
-# TODO: Add resend and email options
 class TextGui < Gui
     def wait_for_email email
-        puts "Please check your email '#{email}' and confirm"
-        gets
-        :check
+        puts "A verification email is sent to '#{email}'."
+        puts "Please check the inbox, confirm and then press enter."
+        puts "Enter 'r' to resend the email to '#{email}'."
+
+        case gets.strip
+        when "r"
+            :resend
+        else
+            :check
+        end
     end
 
     def wait_for_oob device, email
-        puts "Please check #{device[:name]} and confirm"
-        puts "Press 'e' to send a verification email to #{email} instead"
-        gets.strip == 'e' ? :email : :check
+        puts "A push message is sent to '#{device[:name]}'."
+        puts "Please check, confirm and then press enter."
+        puts "Enter 'r' to resend the push message to '#{device[:name]}'."
+        puts "Enter 'e' to send a verification email to '#{email}' instead."
+
+        case gets.strip
+        when "r"
+            :resend
+        when "e"
+            :email
+        else
+            :check
+        end
     end
 
     def choose_oob devices, email
-        puts "Please choose second factor device:"
-        devices.each_with_index do |d, i|
-            puts " - #{i + 1}: #{d[:name]}"
+        loop do
+            puts "Please choose the second factor method:"
+            devices.each_with_index do |d, i|
+                puts " - #{i + 1}: push message to '#{d[:name]}'"
+            end
+            puts " - e: verification email to '#{email}'"
+
+            case input = gets.strip
+            when /\d+/
+                index = input.to_i - 1
+                return index if index >= 0 && index < devices.size
+            when "e"
+                return :email
+            end
+
+            puts "Invalid input '#{input}'"
         end
-        puts " - e: send email to #{email}"
-        input = gets.strip
-        input == "e" ? :email : input.to_i - 1
     end
 end
 
