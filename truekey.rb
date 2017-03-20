@@ -355,7 +355,6 @@ end
 def wait_for_email email, transaction_id
     {
         state: :wait_for_email,
-        done: false,
         valid_answers: [:check, :resend],
         email: email,
         transaction_id: transaction_id,
@@ -365,7 +364,6 @@ end
 def wait_for_oob device, email, transaction_id
     {
         state: :wait_for_oob,
-        done: false,
         valid_answers: [:check, :resend, :email],
         device: device,
         email: email,
@@ -376,7 +374,6 @@ end
 def choose_oob devices, email, transaction_id
     {
         state: :choose_oob,
-        done: false,
         valid_answers: [0...devices.size].to_a + [:email],
         devices: devices,
         email: email,
@@ -387,7 +384,6 @@ end
 def done oauth_token
     {
         state: :done,
-        done: true,
         oauth_token: oauth_token,
     }
 end
@@ -395,7 +391,6 @@ end
 def failure
     {
         state: :failure,
-        done: true,
     }
 end
 
