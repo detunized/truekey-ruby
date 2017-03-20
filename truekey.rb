@@ -365,6 +365,180 @@ def auth_step2 client_info, password, step1_transaction_id, http
     parse_auth_step_response response
 end
 
+def get_vault oauth_token, http
+    mock_response = {
+                 "schema" => "tkd0",
+               "customer" => {
+                            "id" => 11522643,
+                        "schema" => "tkp-s3",
+                      "fullname" => "LastPass Ruby",
+                         "email" => "lastpass.ruby@gmail.com",
+                        "cohort" => "{\"distinct_id\":\"TK:9e44feb7-fe4e-438" +
+                                    "3-ad97-3eafecbd472f\",\"af_status\":\"O" +
+                                    "rganic\",\"signup_date\":\"2016-12-09T1" +
+                                    "7:00:08Z\",\"p\":\"public_2\"}",
+                          "salt" => "845864cf3692189757f5f276b37c2981bdceefe" +
+                                    "a04905699685ad0541c4f9092",
+                         "k_kek" => "AARZxaQ5EeiK9GlqAkz+BzTwb1cO+b8yMN+SCt3" +
+                                    "bzQJO+Fyf4TnlA83Mbl1KrMI09iOd9VQJJlu4iv" +
+                                    "WMwCYhMB6Mw3LOoyS/2UjqmCnxAUqo6MTSnptgj" +
+                                    "lWO",
+                    "public_key" => "{\"n\":\"ec9c8f40232c32cf5fdd8a1fdc7db9" +
+                                    "27387ab7536e22a7c2ca5e610a4fc52f8335616" +
+                                    "5f8219877af7262b8466d3937d7115457dc348e" +
+                                    "bd4d126a8dd01614926e3cc057cae00e854b317" +
+                                    "33f769ea29a630be1f8b8a80e6fd7c08592c508" +
+                                    "958c904106fa5527118dc23a470902471898045" +
+                                    "e355c4cc73e6c314f38261c7b35b4320634705a" +
+                                    "858070368c7e6f5fcac6694f50e3ca7ef0c09be" +
+                                    "ccea0141157a4b92e3963a8cde744f010b1e178" +
+                                    "4bc1d7c5e6ddde7fa8d78252563e8be16d16847" +
+                                    "635e69fa3080c39cdefb904d17d2fc3d6ef4e2e" +
+                                    "ee35eb65dc79ec66f62ba9f45c356a06827e289" +
+                                    "3b698684a7733658ad175306cd3b14631cb5a5a" +
+                                    "d46eb5a0280c49\",\"e\":\"3\"}",
+                   "private_key" => "AATubos0zhkDs3+NrxNevyGYs6lIXfg8ncmrxqk" +
+                                    "wXQSBJtSk04EhZb23Ql5bYOSQ82SqsRsNW7xGjC" +
+                                    "FCybFoAy0cINmxBjUfjiAPdeO6g2Kc0A40b9IfE" +
+                                    "rdvHRiE99TS8hP2tgLbA1hodsGN8zbpUJ1Hz0oA" +
+                                    "EFNBnq2jqmC++CbLynY2vphc+RNScasczziQcse" +
+                                    "/JsXkQ2NIBr9lDjnyelPALc6MHDE8rQt3rBLs/8" +
+                                    "dwYClHLhsitNdRLYqJgWNFqU6JghGbPnAVbmpZX" +
+                                    "+NqUOFzKqGZcVqev6k9d4vx/iEeoeg2PeHWAc7X" +
+                                    "iBKdt2ej2/KmlWceSP8akJ9t2nzDjP7xpMIhKed" +
+                                    "MZKAgC30f2ZznyH/4iZtVim2p50zpFXglfRvFA4" +
+                                    "acZbg6cSzr0JCn8ueATwYE1yo8pHHJ5F7x6SA6R" +
+                                    "wqZMq0hoK6xy1AS9DfVZV+UNR/kSmzXw2ExNbjc" +
+                                    "BVTos/8KaRma5iuLMqgjkGKIXov6yY6TD0XyFIU" +
+                                    "DGXTlUigfxgL7iHOEwkag2yfqNRTTpQOzniPv2Y" +
+                                    "mU1BBKk/6ewMm6LsER2pX269s4v1XdHLZ19whNn" +
+                                    "CS7j1EY9JJlH0TtPBPNsh/i+Zazt3i2DxZ/jI6N" +
+                                    "oUMB1jPjUdBSwS5QZn/XnWP/UcNqGgztQJFRNM3" +
+                                    "c8YhSHK6wicoIHTS4eSqVMKkPXIbRql9i9P7LDZ" +
+                                    "pi7rGFAow8aISRsVag/4o6+gtQrRLN6+3FvrH0n" +
+                                    "yamNeR8JKqWI0JOXsoTVEdjrKV3X3NBsZtQWAa2" +
+                                    "HMKE/2jqPKM5n2fM15IeTDbNEYBcZjRcs98rvfB" +
+                                    "eUhxJFPzLI/inw5ekaOHmthATopbao+/lOO5yFX" +
+                                    "1xE4rS8MlATiE5yCgTy7H4ftwcgtkjCFczKx0u0" +
+                                    "q8seVHjTaNG0zVotWp5xzBuY5cqzSd5xjtdsO4V" +
+                                    "Y9D5k91OC6O/x+5hjKlbdFekScXX8AeqOqE5/0M" +
+                                    "ThCSHgCDb2ob0xjLMT+Mt1DgaPFIBbTCDEcQkSE" +
+                                    "5s4orpF9KT8Eo5JLw7RtcAayIcvzeCf6gm3LqTQ" +
+                                    "ZmakDQrjx+s5I6rw/Bgawso/iA72OgQSQHqEiwu" +
+                                    "F/wTuO/eUkxcLNxisvT+lTDtZ07UFbKRz2eXnx/" +
+                                    "gWAvpzbHWA0nui9hMzaH9yRbM0AA1BD2TanHnUs" +
+                                    "EEhMd+SejKtXD1RT+05VAZNsxEC5QwFN2qo95pC" +
+                                    "t3T3AyM70iTkYlP2pZtbyquyuL5paDV2Bx84xfN" +
+                                    "3h1zlrKsdqO8UevDOD5CHKOpXuTLt1IjJRHOfvJ" +
+                                    "XxN82V995Yvj79mmcWaeyIxN4Hh6Sygy7d1gw2n" +
+                                    "gxPWtJMz7u4gUJfrfSFmv3dDD2oMGI62HKmRmJ0" +
+                                    "somCPTNCWHaDmEF/w48AsDKAOaJTfNBVml+oSQx" +
+                                    "UfByWYBe1xDF8TNAw/7xCt2Z/zQvW4GrdCCJhRf" +
+                                    "OW4vukkK9KGLKd5u1EPRp2nVAfYjQXCdOrCiEh9" +
+                                    "cuhH+WeAzrxxZzkMtVxO+iKtvxhquFJ+JT2S2dd" +
+                                    "FtMYTt71xozUw0iqFV8jmmCY0EKzcqDaosgKTvI" +
+                                    "I8BdF0ColXhgPCFqIhVUekvvpMcNAE+JC6bcVEO" +
+                                    "VYZRWhI9/u8CFzlu3bNa7JzT0zaJcXrQll/Fq3F" +
+                                    "YI+PH60FubJWAZK8Cj5MLDWgIMtzVN64Anm/rnX" +
+                                    "l1m8qan1paQGJ3MmZQWs1074RbONF/y4SmQit7q" +
+                                    "DZ96BhZKYRTAncd5bPYvU4dOsbKQjFdLiWBV7Ul" +
+                                    "mR71eDuuVcLRsX5E0Km8xHVXnvrLbkBAHvCAbqx" +
+                                    "G9f3gCiA1ohjZZmu8MZNz80aVRA5NJL9pHAHDhY" +
+                                    "t5LFELkL+/9Ao3OL/Oi8YlH6r2gR+ogwyhh5zxS" +
+                                    "vaHkEMs1V5vx3dN4bOSrT0n29FGUuJ8HTEZt2zr" +
+                                    "0iwZWElII0HEQntoszAPWPMqrAz+sCRMkRnIbs6" +
+                                    "ymiLlYekUkTh/Ct7THxCELZ2eUN2YAQrxtLje9O" +
+                                    "39k4wn23RNyX7aDXMDbjM3W8HcX2dbfXqsKj7rY" +
+                                    "IJLQY27V8dzHVTqtmhHucFWhANjYxxor2ArwLwV" +
+                                    "S6bpYjcfFVg/X96PeNGIPlY0Uo9ZHCUoqE8dHF3" +
+                                    "nrIVwYOCW+tm4zPmnKPGKlacXtOAl0tjngmPcxp" +
+                                    "BBOBbHVRmNE3KBKChoTQ/vUg/EGocBqyTlNzWBm" +
+                                    "mcWFUFb3HV/PsGoCc/wRrJX2iGkz0+XRjoiPAbx" +
+                                    "ZBXYEZfmGLkeLBFmElK0aO+F+FvjYhr2cnwJHt7" +
+                                    "CRin9OFV+q873vwLMOfW7L9L+dVS3t+9gas5LGv" +
+                                    "rd39KTlWjeB4CoML4waVasrAMlw5gj/VQhsLxOU" +
+                                    "lrHYE/w8faMTPu09GIccvfrlgaII2ygJXLSy6MG" +
+                                    "gSyYTYteX0OaxZlH7qy5mHFSy4XS9apIiP+A1fW" +
+                                    "UBFqOyJ0eo9U7ryBEkKKa+UTX80XE8AzxUO4JBp" +
+                                    "P8PubqdVogmvOd9JMn6Xv8RyIQ6V+W0T3IO+FVO" +
+                                    "RXpPKzhfisaT11SKXOFKPhJBEFIWVuOrveSnd+Q" +
+                                    "tiJ/rJaorRgql7EwOXvuf2ENF5yZAREvrbklow+" +
+                                    "Q8ca4nhrBvwM5yV2QOxAxC37pfoKgJ3lAwuC11R" +
+                                    "J2LgqO1w0ofjOXXuGK5ZTI5YUJiJLy6EZFN52dC" +
+                                    "NJQsvX/wbSiS5WeR/s8CgdmlU7JP1xUlrSN3Udc" +
+                                    "uBMKHUTaXHChCodL70vDz0XGwPPtxMgYImgqhRA" +
+                                    "NKeuaP7hWswlqJMYKfwc+i6mTwiQ6y2WrO2wpuk" +
+                                    "hNmJjM1K8bAHpnIVWZvefR7Z7kCZN1AoMo/SuNq" +
+                                    "uveUV6zTr2gRzivq0rL4V0NtqZuMhCSJ8aVWup5" +
+                                    "TxhH76wAbXFULc78Amh5KbaOAo3PPwUbJJ+iTAG" +
+                                    "/hHlcA7tQD1WWKjKA/BnDyXK2dl4jpocvGJ5UiP" +
+                                    "ghrb7Ju/kCf+bp9zDUwnZqvhdIs3OOuWlpNMqWO" +
+                                    "8NlifvHAJJHbQZ6iVEbIp9foFcIyoo0Ym0NJkjr" +
+                                    "D9VrZNHduKR4r80n5kcNQFyxb1LyxzH00+dIFpK" +
+                                    "+Aodp6VG02s+vAOxsuG+nNVsZNdETXTzJ396rFC" +
+                                    "WP94DSGBMgmN+YYgfAQp5nTBGdv+a0McbHE7I9b" +
+                                    "2iDOgEmT7gD0OUmePqJAdpaSw74Up2HOD20/Auw" +
+                                    "5sNlkiXTForfF7pEmo1L1RucJNuzYdykahnsY",
+                            "dr" => "{\"algo\":\"tk-v1_pbkdf2-hmac-sha512\"," +
+                                    "\"iterations\":10000}",
+               "profile_version" => 2,
+             "enrollment_ticket" => "b96c116d-3572-458f-af30-47ec49e1349a",
+                   "profile_uid" => "9e44feb7-fe4e-4383-ad97-3eafecbd472f",
+                   "distinct_id" => "TK:9e44feb7-fe4e-4383-ad97-3eafecbd472f",
+                         "trial" => true,
+                  "assets_limit" => 15,
+            "email_verification" => {
+                         "verified_at" => "2016-12-09T17:00:08Z",
+                "verification_sent_at" => nil
+            },
+                      "settings" => nil,
+               "data_updated_at" => "2017-03-20T11:41:44-04:00"
+        },
+        "data_updated_at" => "2017-03-20T15:41:44Z",
+                 "assets" => [
+            {
+                        "id" => 50934080,
+                 "member_id" => 11522643,
+                      "name" => "Google",
+                     "login" => "dude@gmail.com",
+                       "url" => "https://accounts.google.com/ServiceLogin",
+                    "domain" => "google.com",
+                    "memo_k" => "AAS2l1XcabgdPTM3CuUZDbT5txJu1ou0gOQ=",
+                "password_k" => "AAR24UbLgkHUhsSXB2mndMISE7U5qn+WA3znhgdXex0br6y5",
+                "created_at" => "2016-12-09T12:07:53-05:00",
+                "updated_at" => "2016-12-09T12:07:53-05:00",
+                  "settings" => "{\"autologin\":1,\"password_reprompt\":" +
+                                "0,\"subdomain_only\":0,\"protectedWithP" +
+                                "assword\":0,\"protectedWithFace\":0,\"c" +
+                                "ustom_partner_asset\":0,\"android_packa" +
+                                "ge_name\":null,\"allow_deletion\":1,\"a" +
+                                "lways_on_top\":0}"
+            },
+            {
+                        "id" => 60789074,
+                 "member_id" => 11522643,
+                      "name" => "facebook",
+                     "login" => "mark",
+                       "url" => "http://facebook.com",
+                    "domain" => "facebook.com",
+                    "memo_k" => nil,
+                "password_k" => "AAShzvG+qXE7bT8MhAbbXelu/huVjuUMDC8IsLw4Lw==",
+                "created_at" => "2017-03-10T05:28:13-05:00",
+                "updated_at" => "2017-03-10T05:28:13-05:00",
+                  "settings" => "{\"autologin\":\"1\",\"password_repromp" +
+                                "t\":\"0\",\"subdomain_only\":\"0\",\"cu" +
+                                "stom_partner_asset\":false}"
+            }
+        ],
+              "documents" => [],
+          "blocked_items" => []
+    }
+
+    http.get_json "https://pm-api.truekey.com/data",
+                  {Authorization: "Bearer #{oauth_token}"},
+                  mock_response
+end
+
 #
 # Auth FSM
 #
@@ -847,8 +1021,14 @@ def open_vault config, http, gui
     #         OAuth tokens.
     whats_next = auth_step2 client_info, config["password"], transaction_id, http
 
-    # Auth FSM
+    # Step 6: Auth FSM -- walk through all the auth steps until we're done
     oauth_token = auth_fsm client_info, whats_next, gui, http
+
+    # Step 7: Get the vault from the server
+    vault = get_vault oauth_token, http
+
+    # Step 8: Parse the vault
+    vault["assets"]
 end
 
 #
