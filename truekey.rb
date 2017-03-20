@@ -804,8 +804,8 @@ class TextGui < Gui
 
     def wait_for_oob device, email
         puts "Please check #{device[:name]} and confirm"
-        gets
-        :check
+        puts "Press 'e' to send a verification email to #{email} instead"
+        gets.strip == 'e' ? :email : :check
     end
 
     def choose_oob devices, email
