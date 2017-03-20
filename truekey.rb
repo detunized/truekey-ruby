@@ -88,6 +88,15 @@ class Http
     # Also checks for operation result and throws on failure. Also throws on
     # HTTP error.
     def post_json url, args, headers = {}, mock_response = nil
+        response = post_json_no_check url, args, headers, mock_response
+        raise "Request failed" if !response["responseResult/isSuccess"]
+
+        response
+    end
+
+    # The version of the above function that doesn't check the isSuccess flag
+    # in the returned response.
+    def post_json_no_check url, args, headers = {}, mock_response = nil
         if @log
             puts "=" * 80
             puts "Request to #{url}"
@@ -107,10 +116,7 @@ class Http
 
         raise "Request failed with code #{response.code}" if !response.success?
 
-        json = CaseInsensitiveHash.new response.parsed_response
-        raise "Request failed" if !json["responseResult/isSuccess"]
-
-        json
+        CaseInsensitiveHash.new response.parsed_response
     end
 
     def should_return_mock? mock_response
@@ -478,10 +484,17 @@ def auth_check client_info, transaction_id, http
     }
 
     args = make_common_request client_info, "code", transaction_id
-    http.post_json "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
-                   args,
-                   {},
-                   mock_response_success
+
+    response = http.post_json_no_check "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
+                                       args,
+                                       {},
+                                       mock_response_success
+
+    if response["responseResult/isSuccess"] && response["nextStep"] == 10
+        done response["idToken"]
+    else
+        failure
+    end
 end
 
 def send_email client_info, email, transaction_id, http
