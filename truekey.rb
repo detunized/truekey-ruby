@@ -58,6 +58,10 @@ end
 class Http
     include HTTParty
 
+    # We have to force JSON since HTTParty fails to automatically recognize
+    # 'application/vnd.api+json' as JSON.
+    format :json
+
     # Network modes:
     #  - :default: return mock response if one is provided
     #  - :force_online: always go online
@@ -73,6 +77,7 @@ class Http
         self.class.get url, {headers: headers}
     end
 
+    # TODO: Remove _json suffix since everything is JSON here.
     def get_json url, headers = {}, mock_response = nil
         if @log
             puts "=" * 80
@@ -104,6 +109,7 @@ class Http
     # Expects JSON in response. Parses and converts it to CaseInsensitiveHash.
     # Also checks for operation result and throws on failure. Also throws on
     # HTTP error.
+    # TODO: Remove _json suffix since everything is JSON here.
     def post_json url, args, headers = {}, mock_response = nil
         response = post_json_no_check url, args, headers, mock_response
         raise "Request failed" if !response["responseResult/isSuccess"]
@@ -113,6 +119,7 @@ class Http
 
     # The version of the above function that doesn't check the isSuccess flag
     # in the returned response.
+    # TODO: Remove _json suffix since everything is JSON here.
     def post_json_no_check url, args, headers = {}, mock_response = nil
         if @log
             puts "=" * 80
