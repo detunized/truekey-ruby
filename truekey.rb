@@ -751,6 +751,10 @@ class Gui
     end
 end
 
+# TODO: Handle 12 and 13 differently. It looks like the server can return
+# 8 (face) or possible 15 (fingerprint) though they are not supported by
+# the Chrome extension. Check how many oob devices there are and pick "wait"
+# or "choose".
 def parse_auth_step_response response
     next_step = response["riskAnalysisInfo/nextStep"]
     data = response["riskAnalysisInfo/nextStepData"]
