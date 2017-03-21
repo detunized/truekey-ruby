@@ -669,10 +669,8 @@ def auth_check client_info, transaction_id, http
               "uasTokenInfo" => nil
     }
 
-    args = make_common_request client_info, "code", transaction_id
-
     response = http.post_json_no_check "https://truekeyapi.intelsecurity.com/sp/profile/v1/gls",
-                                       args,
+                                       make_common_request(client_info, "code", transaction_id),
                                        {},
                                        mock_response_success
 
@@ -694,7 +692,7 @@ def send_email client_info, email, transaction_id, http
     }
 
     args = make_common_request client_info, "code", transaction_id
-    args[:notificationData] = {
+    args[:data][:notificationData] = {
         NotificationType: 1,
         RecipientId: email,
     }
@@ -716,7 +714,7 @@ def send_push client_info, device, transaction_id, http
     }
 
     args = make_common_request client_info, "code", transaction_id
-    args[:notificationData] = {
+    args[:data][:notificationData] = {
         NotificationType: 2,
         RecipientId: device[:id],
     }
