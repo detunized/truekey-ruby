@@ -541,9 +541,14 @@ def get_vault oauth_token, http
           "blocked_items" => []
     }
 
-    http.get_json "https://pm-api.truekey.com/data",
-                  {Authorization: "Bearer #{oauth_token}"},
-                  mock_response
+    http.get_json "https://pm-api.truekey.com/data", {
+               "Authorization" => "Bearer #{oauth_token}",
+                      "Accept" => "application/vnd.tk-pm-api.v1+json",
+             "X-TK-Client-API" => "TK-API-1.1",
+         "X-TK-Client-Version" => "2.6.3820",
+        "X-TK-Client-Language" => "en-US",
+         "X-TK-Client-Context" => "crx-mac",
+    }, mock_response
 end
 
 #
