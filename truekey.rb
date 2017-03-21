@@ -122,7 +122,7 @@ class Http
 
         response = post url,
              args.to_json,
-             headers.merge({"Content-Type" => "application/json"}),
+             headers.merge({"Content-Type" => "application/json; charset=UTF-8"}),
              mock_response
 
         if @log
