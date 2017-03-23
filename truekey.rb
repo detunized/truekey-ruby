@@ -94,7 +94,7 @@ class Http
 
         raise "Request failed with code #{response.code}" if !response.success?
 
-        response.parsed_response
+        CaseInsensitiveHash.new response.parsed_response
     end
 
     def post url, args, headers = {}, mock_response = nil
