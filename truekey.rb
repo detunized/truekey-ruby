@@ -7,6 +7,7 @@ require "json"
 require "yaml"
 require "httparty"
 require "securerandom"
+require "openssl/ccm"
 
 # TODO: Remove mock responses and put in the tests
 
@@ -999,6 +1000,31 @@ def hash_password username, password
     bin = OpenSSL::PKCS5.pbkdf2_hmac password, salt, 10000, 32, "sha512"
     hex = bin.unpack("H*")[0]
     "tk-v1-" + hex
+end
+
+def decrypt_sjcl_aes encrypted, key
+    version = encrypted[1].bytes[0]
+    raise "Unsupported version #{version}" if version != 4
+
+    # TODO: The size of IV is 15 - LOL, where LOL is a length of length,
+    #       the number of bytes required to store the length. Min of 2.
+    #       Check on a large blob bigger than 64k.
+    iv = encrypted[2, 13]
+    ciphertext = encrypted[18..-1]
+
+    # openssl-ccm doesn't return an error when the tag doesn't match. It
+    # just returns "". So we assume when we get "" it's an error.
+    ccm = OpenSSL::CCM.new "AES", key, 8
+    plaintext = ccm.decrypt ciphertext, iv
+    raise "Decrypt failed" if plaintext == ""
+
+    plaintext
+end
+
+def compute_master_key password, salt, encrypted_key
+    key = OpenSSL::PKCS5.pbkdf2_hmac password, salt, 10000, 32, "sha512"
+    master_key_hex = decrypt_sjcl_aes encrypted_key, key
+    [master_key_hex].pack "H*"
 end
 
 #

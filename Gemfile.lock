@@ -5,6 +5,7 @@ GEM
     httparty (0.14.0)
       multi_xml (>= 0.5.2)
     multi_xml (0.6.0)
+    openssl-ccm (1.2.1)
 
 PLATFORMS
   ruby
@@ -12,6 +13,7 @@ PLATFORMS
 DEPENDENCIES
   awesome_print
   httparty
+  openssl-ccm
 
 BUNDLED WITH
    1.12.5
