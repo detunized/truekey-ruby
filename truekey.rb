@@ -1014,6 +1014,7 @@ def decrypt_sjcl_aes encrypted, key
 
     # openssl-ccm doesn't return an error when the tag doesn't match. It
     # just returns "". So we assume when we get "" it's an error.
+    # TODO: Handle actual blank plaintext case. Currently we throw.
     ccm = OpenSSL::CCM.new "AES", key, 8
     plaintext = ccm.decrypt ciphertext, iv
     raise "Decrypt failed" if plaintext == ""
