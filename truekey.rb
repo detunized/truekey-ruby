@@ -68,7 +68,7 @@ class Http
     #  - :force_offline: never go online and return mock even if it's nil
     def initialize network_mode = :default
         @network_mode = network_mode
-        @log = true
+        @log = false
     end
 
     def get url, headers = {}, mock_response = nil
