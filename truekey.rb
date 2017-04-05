@@ -1006,15 +1006,17 @@ def decrypt_sjcl_aes encrypted, key
     version = encrypted[1].bytes[0]
     raise "Unsupported version #{version}" if version != 4
 
-    # TODO: The size of IV is 15 - LOL, where LOL is a length of length,
+    # TODO: The size of IV is 15 - LOL, where LOL is the length of length,
     #       the number of bytes required to store the length. Min of 2.
     #       Check on a large blob bigger than 64k.
     iv = encrypted[2, 13]
     ciphertext = encrypted[18..-1]
 
+    # Nothing to decrypt, it's just the tag
+    return "" if ciphertext.size == 8
+
     # openssl-ccm doesn't return an error when the tag doesn't match. It
     # just returns "". So we assume when we get "" it's an error.
-    # TODO: Handle actual blank plaintext case. Currently we throw.
     ccm = OpenSSL::CCM.new "AES", key, 8
     plaintext = ccm.decrypt ciphertext, iv
     raise "Decrypt failed" if plaintext == ""
