@@ -885,6 +885,10 @@ class String
     def e64
         Base64.strict_encode64 self
     end
+
+    def decode_hex
+        [self].pack "H*"
+    end
 end
 
 # TODO: Make sure these don't leak outside
@@ -1070,8 +1074,37 @@ def open_vault config, http, gui
     # Step 7: Get the vault from the server
     vault = get_vault oauth_token, http
 
-    # Step 8: Parse the vault
-    vault["assets"]
+    # Step 8: Compute the master key
+    master_key = compute_master_key config["password"],
+                                    vault["customer/salt"].decode_hex,
+                                    vault["customer/k_kek"].d64
+
+    # Step 9: Parse the vault
+    decrypt_accounts vault["assets"], master_key
+end
+
+def decrypt_accounts accounts, master_key
+    accounts.map { |account|
+        decrypted = {
+                name: account["name"] || "",
+            username: account["login"] || "",
+            password: "",
+                 url: account["url"] || "",
+               notes: "",
+        }
+
+        encrypted_password = account["password_k"]
+        if encrypted_password
+            decrypted[:password] = decrypt_sjcl_aes encrypted_password.d64, master_key
+        end
+
+        encrypted_notes = account["memo_k"]
+        if encrypted_notes
+            decrypted[:notes] = decrypt_sjcl_aes encrypted_notes.d64, master_key
+        end
+
+        decrypted
+    }
 end
 
 #
