@@ -899,7 +899,7 @@ class StringIO
 end
 
 # Parses clientToken field returned by the server. It contains encoded
-# OCRA/OPT/RFC 6287 infofmation. This is used later on to sign messages.
+# OCRA/OPT/RFC 6287 information. This is used later on to sign messages.
 def parse_client_token encoded
     StringIO.open encoded.d64 do |io|
         token_type = io.ru 1, "C"
